@@ -345,13 +345,15 @@
                 {   
                     "data": "id",
                     "render": function ( data, type, row ) {
-                        console.log(JSON.stringify(row));
                         if(type === 'display'){
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>';
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
+                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
                         }else if(type === 'sort'){
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>';
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
+                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
                         }else{
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>';
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
+                                +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
                         }
                         
                     }
@@ -396,6 +398,31 @@
         $("#modalForm #amount").val(values.values.added_amount);
         $("#modalForm #modalsave").val(values.values.id);
         $("#modalForm .input-group>label").attr("class" , "active");
+    }
+    function Print_copy(value){
+        var data = $(value).data(values);
+        var values=data.values;
+        var d = new Date();
+        total_pay=parseInt(values.payable_amount)+parseInt(values.added_amount);
+        $("#setTime").html(d);
+        $("#printName").html(values.name);
+        $("#printDueDate").html(values.due_date);
+        $("#printCustomerId").html(values.customer_id);
+        $("#printPayableAmount").html(values.payable_amount);
+        $("#printAmount").html(total_pay);
+        $("#message").html(values.custom_message);
+        printJS(
+            {
+                printable :'printSlip',
+                type : 'html' ,
+                targetStyles: [
+                    'width', 'font-size'
+                ]
+            }
+        );
+        window.onafterprint = function(){
+            window.location.reload(true);
+        }
     }
 
     $("#validateBtn").click(function(event){
