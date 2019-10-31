@@ -30,6 +30,7 @@ function getPaymentHistoryList($customerId , $conn){
             $payment['billing_date'] = $row["billing_date"];
             $payment['added_amount'] = $row["added_amount"]; 
             $payment['custom_message'] = $row["custom_message"];
+            $payment['user_name'] = $row["user_name"];
             $result_arr['data'][] = $payment; 
         }
         echo json_encode($result_arr);
@@ -39,7 +40,12 @@ function getPaymentHistoryList($customerId , $conn){
 }
 
 function getPaymentHistoryListAll($conn){
-    $sql_query = "select * from customer";
+    session_start();
+    if(isset($_SESSION['user'])){
+        $sql_query = "select * from customer where user_name='". $_SESSION['user']."'";
+    }else{
+        $sql_query = "select * from customer";
+    }
     $result = $conn->query($sql_query);
     $result_arr = $payment = [] ;
     if ($result->num_rows > 0) {
@@ -54,6 +60,7 @@ function getPaymentHistoryListAll($conn){
             $payment['billing_date'] = $row["billing_date"];
             $payment['added_amount'] = $row["added_amount"]; 
             $payment['custom_message'] = $row["custom_message"];
+            $payment['user_name'] = $row["user_name"];
             $result_arr['data'][] = $payment; 
         }
         echo json_encode($result_arr);

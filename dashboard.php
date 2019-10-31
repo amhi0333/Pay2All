@@ -2,8 +2,11 @@
     session_start();
     $config = parse_ini_file("config.ini");
     require_once('database_conn.php');
+    if( !isset($_SESSION['logged_in']) ){
+            header("Location: ".$config["HOST_URL"]."/"); 
+    }
     // $conn and $conn_stat
-
+    $session_user=isset($_SESSION['user'])?$_SESSION['user']:"";
     if( $conn_stat && count($_POST) > 0 && isset($_POST["modalsave"]) ) {
          //$name = isset($_POST["name"])?$_POST["name"]:"";
         //$address = isset($_POST["address"])?$_POST["address"]:"";
@@ -28,6 +31,7 @@
         if(isset($add_arr[1])){
             $address=$add_arr[1];
         }
+        $session_user=isset($_SESSION['user'])?$_SESSION['user']:"";
         $payableAmount = isset($_POST["payableAmount"])?$_POST["payableAmount"]:"";
         $customMessage = isset($_POST["customMessage"])?$_POST["customMessage"]:"";
         $amount = isset($_POST["amount"])?$_POST["amount"]:"";
@@ -35,16 +39,16 @@
         $dueDate = $_POST["dueDate"];
         $sql_exists_query="select * from customer where customer_id=$customerId";
         $result = $conn->query($sql_exists_query);
-        $found=false;
-        if ($result->num_rows > 0) {
-            $found=true;
-        }
-        if($found){//update
-             $sql_query = "UPDATE customer SET name = '$name',address='$address',payable_amount='$payableAmount',due_date='$dueDate',billing_date = '".date("Y-m-d")."',added_amount = '".$amount."', custom_message = '".$customMessage."' WHERE customer.customer_id = ".$customerId;
-        }else{//insert
-             $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."')";
-        }
-       
+//        $found=false;
+//        if ($result->num_rows > 0) {
+//            $found=true;
+//        }
+//        if($found){//update
+//             $sql_query = "UPDATE customer SET name = '$name',address='$address',payable_amount='$payableAmount',due_date='$dueDate',billing_date = '".date("Y-m-d")."',added_amount = '".$amount."', custom_message = '".$customMessage."' WHERE customer.customer_id = ".$customerId;
+//        }else{//insert
+//             $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."')";
+//        }
+        $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message,user_name) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."','$session_user')";
         if( !mysqli_query($conn , $sql_query) ){
             // echo mysqli_error($conn);
             echo ($sql_query);
@@ -56,10 +60,15 @@
     else{
         // echo print_r("Negtive",true);
     }
+    if(isset($_GET['logout'])){
+        unset($_SESSION['logged_in']);
+        header("Location: ".$config["HOST_URL"]."/"); 
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Pay2All</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -103,6 +112,10 @@
                     <li class="nav-item">
                         <a class="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab"
                         aria-controls="pills-profile" aria-selected="false">Payment List</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="pills-user-tab" data-toggle="pill" href="#pills-user" role="tab"
+                        aria-controls="pills-user" aria-selected="false">User Management</a>
                     </li>
                 </ul>
                 <div class="tab-content pt-2 pl-1" id="pills-tabContent">
@@ -194,6 +207,18 @@
                         </div>
                         <!-- Editable table -->
                     </div>
+                    <div class="tab-pane fade" id="pills-user" role="tabpanel" aria-labelledby="pills-user-tab">
+                        <div class="card">
+                            <div class="card-body">
+                                 <form class="md-form needs-validation billPay" action="#" method="GET">
+                                        <div class="input-group mb-3">
+                                            <button type="submit" name="logout" id="logout" class="btn btn-primary">Logout</button>
+                                        </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
                 <div id="myModal" class="modal fade" role="dialog">
                     <div class="modal-dialog">
@@ -222,13 +247,19 @@
                                     <div class="input-group mb-3 ">
                                         <div class="input-group">
                                             <input name="customerId" type="number" class="form-control" id="customerId" aria-describedby="basic-addon3" readonly="readonly">
-                                            <label for="customerId" class="">Consumer No</label>
+                                            <label for="customerId" class="">Customer Id</label>
                                         </div>
                                     </div>
                                     <div class="input-group mb-3 ">
                                         <div class="input-group">
                                             <input name="dueDate" type="text" class="form-control" id="dueDate" aria-describedby="basic-addon3" readonly="readonly">
                                             <label for="dueDate" class="">Due Date</label>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3 ">
+                                        <div class="input-group">
+                                            <input name="billing_date" type="text" class="form-control" id="billing_date" aria-describedby="basic-addon3">
+                                            <label for="billing_date" class="">Billing Date</label>
                                         </div>
                                     </div>
                                     <div class="input-group mb-3 ">
@@ -264,13 +295,14 @@
                         <h4><pre>Pay2All</pre></h4>
                         <h5><pre>Bill Payment</pre></h5>
                         <h6 id="setTime"></h6>
-                        <h4><pre>Name : <span id="printName"></span></pre></h4>
-                        <h4><pre>Customer Id : <span id="printCustomerId"></span></pre></h4>
-                        <h4><pre>Due Date : <span id="printDueDate"></span></pre></h4>
-                        <h4><pre>Billing Date : <?=date("Y-m-d")?></pre></h4>
-                        <h4><pre>Payable Amount : <span id="printPayableAmount"></span></pre></h4>
-                        <h4><pre>Total Payable Amount : <span id="printAmount"></span></pre></h4>
-                        <h4><pre>Message : <span id="message"></span></pre></h4>
+                        <h6><pre>Name:<span id="printName"></span></pre></h6>
+                        <h6><pre>Customer:<span id="printCustomerId"></span></pre></h6>
+                        <h6><pre>Due Date:<span id="printDueDate"></span></pre></h6>
+                        <h6><pre>Bill Date:<?=date("Y-m-d")?></pre></h6>
+                        <h6><pre>Payable Amount:<span id="printPayableAmount"></span></pre></h6>
+                        <h6><pre>Total Amount:<span id="printAmount"></span></pre></h6>
+                        <h6><pre>Message:<span id="message"></span></pre></h6>
+                        <h6><pre>Receiver:<?=$session_user?></pre></h6>
                         
                         <h5>-----Thank you for using Pay2All------</pre></h5>
                     </div>
@@ -297,7 +329,7 @@
     var consumerNo = $("#CustomerId").val();
     $(document).ready(function() {
         // var data_url = '/Pay2All/paymentHistory.php?consumerId='+consumerNo
-        var data_url = 'http://<?php echo $config['HOST_URL']?>/paymentHistory.php';
+        var data_url = '<?php echo $config['HOST_URL']?>/paymentHistory.php';
         $('#paymentHistoryTable').DataTable( {
             "ajax": data_url,
             "columns": [
@@ -354,7 +386,6 @@
     function editRow(value){
         $("#myModal").modal("toggle");
         var values = $(value).data(values);
-        console.log(values.values.added_amount);
         $("#modalForm #customerId").val(values.values.customer_id);
         $("#modalForm #name").val(values.values.name);
         $("#modalForm #address").val(values.values.address);
@@ -429,7 +460,7 @@
             obj[item.name] = item.value;
             return obj;
         });
-        var url = "http://<?php echo $config['HOST_URL']?>/dashboard.php";
+        var url = "<?php echo $config['HOST_URL']?>/dashboard.php";
         new Promise( (resolve , reject) => {
             var x = ajaxSubmit( billPayFormData , url , "POST" );
             setTimeout( resolve(x) , 2000)

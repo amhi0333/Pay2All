@@ -17,13 +17,14 @@ if( count($_POST) > 0 && isset($_POST['username'] ) && isset($_POST['password'] 
 }
 if( isset($_SESSION['logged_in']) ){
     if( $_SESSION['logged_in'] ){
-        header("Location: http://".$config["HOST_URL"]."/dashboard.php"); 
+        header("Location: ".$config["HOST_URL"]."/dashboard.php"); 
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Pay2All</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
