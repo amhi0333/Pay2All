@@ -20,7 +20,7 @@
         $sql_query = "UPDATE customer SET billing_date = '".$billing_date."',added_amount = '".$amount."', custom_message = '".$customMessage."' WHERE customer.id = ".$id;
         $result = $conn->query($sql_query);
     }
-    else if( $conn_stat && count($_POST) > 0 && !isset($_POST["modalsave"]) ) {
+    if( $conn_stat && count($_POST) > 0 && isset($_POST["insert_customer"]) ) {
         $name_post = isset($_POST["name"])?$_POST["name"]:"";
         $add_arr=explode(',',$name_post);
         $name="";
@@ -37,18 +37,18 @@
         $amount = isset($_POST["amount"])?$_POST["amount"]:"";
         $customerId = $_POST["value"];
         $dueDate = $_POST["dueDate"];
-        $sql_exists_query="select * from customer where customer_id=$customerId";
+        $sql_exists_query="select * from customer where customer_id=$customerId and due_date='$dueDate'";
         $result = $conn->query($sql_exists_query);
-//        $found=false;
-//        if ($result->num_rows > 0) {
-//            $found=true;
-//        }
-//        if($found){//update
-//             $sql_query = "UPDATE customer SET name = '$name',address='$address',payable_amount='$payableAmount',due_date='$dueDate',billing_date = '".date("Y-m-d")."',added_amount = '".$amount."', custom_message = '".$customMessage."' WHERE customer.customer_id = ".$customerId;
-//        }else{//insert
-//             $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."')";
-//        }
-        $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message,user_name) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."','$session_user')";
+        $found=false;
+        if ($result->num_rows > 0) {
+            $found=true;
+        }
+        if($found){//update
+             $sql_query = "UPDATE customer SET name = '$name',address='$address',payable_amount='$payableAmount',due_date='$dueDate',billing_date = '".date("Y-m-d")."',added_amount = '".$amount."', custom_message = '".$customMessage."' WHERE customer.customer_id = ".$customerId;
+        }else{//insert
+             $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message,user_name) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."','$session_user')";
+        }
+//        $sql_query = "INSERT INTO customer (id, customer_id, name, address, payable_amount, due_date,billing_date, added_amount, custom_message,user_name) VALUES (NULL, ".$customerId.", '".$name."', '".$address."', ".$payableAmount.", '".$dueDate."','".date("Y-m-d")."', ".$amount.", '".$customMessage."','$session_user')";
         if( !mysqli_query($conn , $sql_query) ){
             // echo mysqli_error($conn);
             echo ($sql_query);
@@ -57,8 +57,33 @@
         }
         exit;
     }
-    else{
-        // echo print_r("Negtive",true);
+    if( $conn_stat && count($_POST) > 0 && isset($_POST["editusermodal"]) ) {
+        if(!empty($_POST["editusermodal"])){
+            $user_id=$_POST["editusermodal"];
+            $set="id=$user_id";
+            if(!empty($_POST['edit_user_name'])){
+                $name=$_POST['edit_user_name'];
+                $set.=",name='$name'";
+            }
+            if(!empty($_POST['edit_print_limit'])){
+                $print_limit=$_POST['edit_print_limit'];
+                $set.=",print_limit=$print_limit";
+            }
+            $sql_q="UPDATE user set $set WHERE id=$user_id";
+            if( !mysqli_query($conn , $sql_q) ){
+            // echo mysqli_error($conn);
+                echo ($sql_query);
+            }else{
+                //echo '{ "result" : "true" , "message" : "User Updated"}';
+            }
+        }else{
+        }
+    }
+    if(isset($_GET['cmd']) && $_GET['cmd']=='delete'){
+        $user_id=$_GET['user'];
+        $sql="DELETE FROM user WHERE id=$user_id";
+        $result = $conn->query($sql);
+        header("Location: ".$config["HOST_URL"]."/"); 
     }
     if(isset($_GET['logout'])){
         unset($_SESSION['logged_in']);
@@ -210,11 +235,30 @@
                     <div class="tab-pane fade" id="pills-user" role="tabpanel" aria-labelledby="pills-user-tab">
                         <div class="card">
                             <div class="card-body">
+                                <h3 class="card-header text-center font-weight-bold text-uppercase py-4">User Management</h3>
                                  <form class="md-form needs-validation billPay" action="#" method="GET">
                                         <div class="input-group mb-3">
                                             <button type="submit" name="logout" id="logout" class="btn btn-primary">Logout</button>
                                         </div>
                                 </form>
+                                <div id="user_table" class="table-editable">
+                                <table class="table table-bordered table-responsive-md table-striped text-center" id="user_list_table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">Id</th>
+                                        <th class="text-center">Name</th>
+                                        <th class="text-center">Username</th>
+                                        <th class="text-center">Email</th>
+                                        <th class="text-center">Print Limit</th>
+                                        <th class="text-center">Printed</th>
+                                        <th class="text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                </tbody>
+                                </table>
+                            </div>
                             </div>
                         </div>
                     </div>
@@ -290,25 +334,68 @@
                         </div>
                     </div>
                 </div>
-                <div id="printSlip" class="col-md-4">
-                    <div style="text-align:center">
-                        <h4><pre>Pay2All</pre></h4>
-                        <h5><pre>Bill Payment</pre></h5>
-                        <h6 id="setTime"></h6>
-                        <h6><pre>Name:<span id="printName"></span></pre></h6>
-                        <h6><pre>Customer:<span id="printCustomerId"></span></pre></h6>
-                        <h6><pre>Due Date:<span id="printDueDate"></span></pre></h6>
-                        <h6><pre>Bill Date:<?=date("Y-m-d")?></pre></h6>
-                        <h6><pre>Payable Amount:<span id="printPayableAmount"></span></pre></h6>
-                        <h6><pre>Total Amount:<span id="printAmount"></span></pre></h6>
-                        <h6><pre>Message:<span id="message"></span></pre></h6>
-                        <h6><pre>Receiver:<?=$session_user?></pre></h6>
-                        
-                        <h5>-----Thank you for using Pay2All------</pre></h5>
+                <div id="userModal" class="modal fade" role="dialog">
+                    <div class="modal-dialog">
+                        <!-- Modal content-->
+                        <div class="modal-content">
+                            <div class="modal-header text-center">
+                                <h4 class="modal-title w-100 font-weight-bold">Edit User</h4>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form class="md-form" id="modalUser" action="#" method="POST">
+                                    <div class="input-group mb-3 " >
+                                        <div class="input-group">
+                                            <input name="edit_user_name" type="text" class="form-control" id="edit_user_name" aria-describedby="basic-addon3" >
+                                            <label for="edit_user_name" class="">Name</label>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3 " >
+                                        <div class="input-group">
+                                            <input name="edit_email" type="text" class="form-control" id="edit_email" aria-describedby="basic-addon3">
+                                            <label for="edit_email" class="">Email</label>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3 " >
+                                        <div class="input-group">
+                                            <input name="edit_print_limit" type="text" class="form-control" id="edit_print_limit" aria-describedby="basic-addon3">
+                                            <label for="edit_print_limit" class="">Print Limit</label>
+                                        </div>
+                                    </div>
+                                    
+                                    
+                                    <input name="editusermodal" type="hidden" class="form-control" id="editusermodal" aria-describedby="basic-addon3">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" type="submit" name="edituser_modal" id="edituser_modal" class="btn btn-primary" >Save</button>
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
+                
+                
         </div>
     </div>
+	<div id="printSlip">
+		<div>
+			<!--<h4>------Pay2All------</h4>-->
+			<h5>Bill Payment</h5>
+                        <h6>Receiver:<?=$session_user?></h6>
+			<h6><span id="setTime"></span></h6>
+			<h6>Name:<span id="printName"></span></h6>
+			<h6>Customer:<span id="printCustomerId"></span></h6>
+			<h6>Due Date:<span id="printDueDate"></span></h6>
+			<h6>Bill Date:<?=date("Y-m-d")?></h6>
+			<h6>Total Amount:<span id="printAmount"></span></h6>
+			<h6>TID:<span id="message"></span></h6>
+			<h5>--Thank you for using--</h5>
+			<h5>Electricity Bill Payment</h5>
+		</div>
+	</div>
 </body>
 <style>
     .pt-3-half {
@@ -320,9 +407,31 @@
     }
     #printSlip{
         display: none;
-        width : 400px;
-        font-size: 9px;
+        width : 71mm;
+        font-size: 20px;
+        size: 100mm 150mm;
+        font-weight: bold;
     }
+	
+	@media print {
+		@page { size: 100mm 150mm}
+		#printSlip{
+			display:block;
+                        margin-left:0 ;
+		}
+        #printSlip h1,h2,h3,h4,h5,h6{
+            font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+            display: block;
+            font-size: 20px;
+            color: #212529;
+            font-weight: bold;
+        }
+		body> div.container>.row{
+			display:none;
+		}
+		
+	} /* this line is needed for fixing Chrome's bug */
+	
 </style>
 
 <script>
@@ -361,6 +470,36 @@
                 }
             ]
         } );
+        //user_management
+        var data_url = '<?php echo $config['HOST_URL']?>/userManagement.php';
+        $('#user_list_table').DataTable( {
+            "ajax": data_url,
+            "columns": [
+                { "data": "id" },
+                { "data": "name" },
+                { "data": "username" },
+                { "data": "email" },
+                { "data": "print_limit" },
+                { "data": "printed" },
+                {   
+                    "data": "id",
+                    "render": function ( data, type, row ) {
+                        if(type === 'display'){
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                        }else if(type === 'sort'){
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                        }else{
+                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                                +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                        }
+                        
+                    }
+                    
+                }
+            ]
+        } );
         
     } );
     function ajaxSubmit(data , url , type){
@@ -385,6 +524,21 @@
         })
     }
 
+    function editUser(value){
+        $("#userModal").modal("toggle");
+        var values = $(value).data(values);
+        $("#modalUser #edit_user_name").val(values.values.name);
+        $("#modalUser #edit_email").val(values.values.email);
+        $("#modalUser #edit_print_limit").val(values.values.print_limit);
+        $("#modalUser #editusermodal").val(values.values.id);
+        $("#modalUser .input-group>label").attr("class" , "active");
+    }
+    function deleteUser(value){
+        var values = $(value).data(values);
+        user_id=values.values.id;
+        var delete_url = '<?php echo $config['HOST_URL']?>/dashboard.php?cmd=delete&user='+user_id;
+        window.location=delete_url;
+    }
     function editRow(value){
         $("#myModal").modal("toggle");
         var values = $(value).data(values);
@@ -402,7 +556,7 @@
     function Print_copy(value){
         var data = $(value).data(values);
         var values=data.values;
-        var d = new Date();
+        var d = new Date().toLocaleString();
         total_pay=parseInt(values.payable_amount)+parseInt(values.added_amount);
         $("#setTime").html(d);
         $("#printName").html(values.name);
@@ -411,18 +565,20 @@
         $("#printPayableAmount").html(values.payable_amount);
         $("#printAmount").html(total_pay);
         $("#message").html(values.custom_message);
-        printJS(
-            {
-                printable :'printSlip',
-                type : 'html' ,
-                targetStyles: [
-                    'width', 'font-size'
-                ]
-            }
-        );
-        window.onafterprint = function(){
-            window.location.reload(true);
-        }
+        window.print();
+        // printJS(
+        //     {
+        //         printable :'printSlip',
+        //         type : 'html' ,
+        //         targetStyles: [
+        //             'width', 'font-size','size'
+        //         ],
+        //         maxWidth : '219.212598425'
+        //     }
+        // );
+        // window.onafterprint = function(){
+        //     window.location.reload(true);
+        // }
     }
 
     $("#validateBtn").click(function(event){
@@ -476,7 +632,12 @@
         event.preventDefault();
         event.stopPropagation();
         document.getElementById("modalForm").submit();
-    })
+    });
+    $("#edituser_modal").click(function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        document.getElementById("modalUser").submit();
+    });
     
     
 
@@ -489,11 +650,12 @@
         });
         var url = "<?php echo $config['HOST_URL']?>/dashboard.php";
         new Promise( (resolve , reject) => {
+            billPayFormData['insert_customer']=1;
             var x = ajaxSubmit( billPayFormData , url , "POST" );
             setTimeout( resolve(x) , 2000)
         } ).then(function(data){
             var nameArr = billPayFormData.name.split(',');
-            var d = new Date();
+            var d = new Date().toLocaleString();
             total_pay=parseInt(billPayFormData.payableAmount)+parseInt(billPayFormData.amount);
             $("#setTime").html(d);
             $("#printName").html(nameArr[0]);
@@ -502,21 +664,23 @@
             $("#printPayableAmount").html(billPayFormData.payableAmount);
             $("#printAmount").html(total_pay);
             $("#message").html(billPayFormData.customMessage);
-            printJS(
-                {
-                    printable :'printSlip',
-                    type : 'html' ,
-                    targetStyles: [
-                        'width', 'font-size'
-                    ]
-                }
-            );
+            // printJS(
+            //     {
+            //         printable :'printSlip',
+            //         type : 'html' ,
+            //         targetStyles: [
+            //             'width', 'font-size','size'
+            //         ],
+            //         maxWidth: '219.212598425'
+            //     }
+            // );
+            window.print();
             window.onafterprint = function(){
                 window.location.reload(true);
             }
-        }) 
+        });
         
-    })
+    });
 
 
 </script>
