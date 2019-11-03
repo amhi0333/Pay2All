@@ -5,8 +5,30 @@
     if( !isset($_SESSION['logged_in']) ){
             header("Location: ".$config["HOST_URL"]."/"); 
     }
+    
     // $conn and $conn_stat
     $session_user=isset($_SESSION['user'])?$_SESSION['user']:"";
+    //user_info
+    $sql_query = "select * from user where username='$session_user'";
+    $result = $conn->query($sql_query);
+    $user_arr = [] ;
+    if ($result->num_rows > 0) {
+        // output data of each row
+        while($row = $result->fetch_assoc()) {
+            $user_arr['id'] = $row["id"]; 
+            $user_arr['name'] = $row["name"]; 
+            $user_arr['email'] = $row["email"]; 
+            $user_arr['username'] = $row["username"]; 
+            $user_arr['password'] = $row["password"]; 
+            $user_arr['phone'] = $row["phone"];
+            $user_arr['print_limit'] = $row["print_limit"]; 
+            $user_arr['printed'] = $row["printed"]; 
+        }
+    } 
+    $print_capability=true;
+    if($user_arr['printed']>=$user_arr['print_limit']){
+        $print_capability=false;
+    }
     if( $conn_stat && count($_POST) > 0 && isset($_POST["modalsave"]) ) {
          //$name = isset($_POST["name"])?$_POST["name"]:"";
         //$address = isset($_POST["address"])?$_POST["address"]:"";
@@ -69,15 +91,25 @@
                 $print_limit=$_POST['edit_print_limit'];
                 $set.=",print_limit=$print_limit";
             }
+            if(!empty($_POST['edit_password'])){
+                $edit_password=$_POST['edit_password'];
+                $set.=",password='$edit_password'";
+            }
             $sql_q="UPDATE user set $set WHERE id=$user_id";
             if( !mysqli_query($conn , $sql_q) ){
             // echo mysqli_error($conn);
-                echo ($sql_query);
+                echo ($sql_q);
             }else{
                 //echo '{ "result" : "true" , "message" : "User Updated"}';
             }
         }else{
         }
+    }
+    if(isset($_POST['cmd']) && $_POST['cmd']=='print'){
+        $print_user=$_POST['user'];
+        //increase printed 
+        $print_sql="update user set printed=printed+1 where username='$print_user'";
+        $result = $conn->query($print_sql);
     }
     if(isset($_GET['cmd']) && $_GET['cmd']=='delete'){
         $user_id=$_GET['user'];
@@ -195,8 +227,11 @@
                                         </div>
                                         <input name="OperatorId" type="hidden" id="OperatorId" class="form-control" value=83>
                                 </div>
+                                <?php if(!$print_capability):?>
+                                <div><p style="color: red;">Please contact with Administration for enabling Print option.</p></div>
+                                <?php endif;?>
                                 <!-- Button -->
-                                <button type="submit" id="billPayBtn" class="btn btn-primary validityHidden">Print</button>
+                                <button type="submit" id="billPayBtn" class="btn btn-primary validityHidden" <?=(!$print_capability)?'disabled':''?>>Print</button>
                                 </form>
                             </div>
                         </div>
@@ -360,7 +395,13 @@
                                     </div>
                                     <div class="input-group mb-3 " >
                                         <div class="input-group">
-                                            <input name="edit_print_limit" type="text" class="form-control" id="edit_print_limit" aria-describedby="basic-addon3">
+                                            <input name="edit_password" type="text" class="form-control" id="edit_password" aria-describedby="basic-addon3">
+                                            <label for="edit_password" class="">Password</label>
+                                        </div>
+                                    </div>
+                                    <div class="input-group mb-3 " >
+                                        <div class="input-group">
+                                            <input name="edit_print_limit" type="text" class="form-control" id="edit_print_limit" aria-describedby="basic-addon3" <?=($session_user!='admin')?'readonly="readonly"':'';?>>
                                             <label for="edit_print_limit" class="">Print Limit</label>
                                         </div>
                                     </div>
@@ -437,6 +478,7 @@
 <script>
     var consumerNo = $("#CustomerId").val();
     $(document).ready(function() {
+        var print_capa='<?=$print_capability?>';
         // var data_url = '/Pay2All/paymentHistory.php?consumerId='+consumerNo
         var data_url = '<?php echo $config['HOST_URL']?>/paymentHistory.php';
         $('#paymentHistoryTable').DataTable( {
@@ -454,15 +496,20 @@
                 {   
                     "data": "id",
                     "render": function ( data, type, row ) {
+                        if(print_capa=='1'){
+                            print_button='<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
+                        }else{
+                            print_button='<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'" disabled>Print</button>';
+                        }
                         if(type === 'display'){
                             return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
-                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
+                             +print_button;
                         }else if(type === 'sort'){
                             return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
-                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
+                             +print_button;
                         }else{
                             return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editRow(this)" id="row'+data+'">Edit</button>'
-                                +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="Print_copy(this)" id="print_row'+data+'">Print</button>';
+                                +print_button;
                         }
                         
                     }
@@ -472,6 +519,7 @@
         } );
         //user_management
         var data_url = '<?php echo $config['HOST_URL']?>/userManagement.php';
+        var session_user='<?=$session_user?>';
         $('#user_list_table').DataTable( {
             "ajax": data_url,
             "columns": [
@@ -484,17 +532,26 @@
                 {   
                     "data": "id",
                     "render": function ( data, type, row ) {
-                        if(type === 'display'){
+                        if(session_user=='admin'){
+                            if(type === 'display'){
                             return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
                              +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
-                        }else if(type === 'sort'){
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
-                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                            }else if(type === 'sort'){
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                                 +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                            }else{
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                                    +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                            }
                         }else{
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
-                                +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                            if(type === 'display'){
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                            }else if(type === 'sort'){
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                            }else{
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                            }
                         }
-                        
                     }
                     
                 }
@@ -553,6 +610,20 @@
         $("#modalForm #modalsave").val(values.values.id);
         $("#modalForm .input-group>label").attr("class" , "active");
     }
+    function update_printed_value(){
+        var url = "<?php echo $config['HOST_URL']?>/dashboard.php";
+        $.ajax({
+            type : 'POST',
+            url : url,
+            data : {cmd:"print",user:'<?=$session_user?>'},
+            success : function(response){
+               
+            },
+            error: function(){
+                return 0;
+            }
+        });
+    }
     function Print_copy(value){
         var data = $(value).data(values);
         var values=data.values;
@@ -566,6 +637,7 @@
         $("#printAmount").html(total_pay);
         $("#message").html(values.custom_message);
         window.print();
+//        update_printed_value();
         // printJS(
         //     {
         //         printable :'printSlip',
@@ -576,9 +648,9 @@
         //         maxWidth : '219.212598425'
         //     }
         // );
-        // window.onafterprint = function(){
-        //     window.location.reload(true);
-        // }
+         window.onafterprint = function(){
+             update_printed_value();
+         }
     }
 
     $("#validateBtn").click(function(event){
@@ -676,6 +748,7 @@
             // );
             window.print();
             window.onafterprint = function(){
+                update_printed_value();
                 window.location.reload(true);
             }
         });

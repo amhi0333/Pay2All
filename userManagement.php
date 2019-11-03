@@ -40,7 +40,7 @@ function getUserList($username , $conn){
 function getUserListAll($conn){
     session_start();
     if(isset($_SESSION['user']) && $_SESSION['user']=="admin" ){
-        $sql_query = "select * from user where username !='admin'";
+        $sql_query = "select * from user";
     }else{
         $sql_query = "select * from user where username='". $_SESSION['user']."'";
     }
