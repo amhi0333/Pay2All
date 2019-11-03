@@ -42,9 +42,9 @@ function getPaymentHistoryList($customerId , $conn){
 function getPaymentHistoryListAll($conn){
     session_start();
     if(isset($_SESSION['user'])){
-        $sql_query = "select * from customer where user_name='". $_SESSION['user']."'";
+        $sql_query = "select * from customer where user_name='". $_SESSION['user']."' order by id desc";
     }else{
-        $sql_query = "select * from customer";
+        $sql_query = "select * from customer order by id desc";
     }
     $result = $conn->query($sql_query);
     $result_arr = $payment = [] ;

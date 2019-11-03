@@ -23,6 +23,7 @@
             $user_arr['phone'] = $row["phone"];
             $user_arr['print_limit'] = $row["print_limit"]; 
             $user_arr['printed'] = $row["printed"]; 
+            $user_arr['hide_column'] = $row["hide_column"]; 
         }
     } 
     $print_capability=true;
@@ -95,6 +96,12 @@
                 $edit_password=$_POST['edit_password'];
                 $set.=",password='$edit_password'";
             }
+            if(!empty($_POST['edit_hide_column'])){
+                $set.=",hide_column=1";
+            }
+            if(empty($_POST['edit_hide_column'])){
+                $set.=",hide_column=0";
+            }
             $sql_q="UPDATE user set $set WHERE id=$user_id";
             if( !mysqli_query($conn , $sql_q) ){
             // echo mysqli_error($conn);
@@ -102,6 +109,7 @@
             }else{
                 //echo '{ "result" : "true" , "message" : "User Updated"}';
             }
+            header("Location: ".$config["HOST_URL"]."/dashboard.php");
         }else{
         }
     }
@@ -207,7 +215,7 @@
                                                 <label for="dueDate" class="disabled">Due Date</label>
                                             </div>
                                         </div>
-                                        <div class="input-group mb-3 validityHidden">
+                                        <div class="input-group mb-3 " style="display: none;">
                                             <div class="input-group">
                                                 <input name="payableAmount" type="number" class="form-control" id="payableAmount" aria-describedby="basic-addon3" readonly="readonly">
                                                 <label for="payableAmount" class="disabled">Payable Amount</label>
@@ -222,7 +230,7 @@
                                         <div class="input-group mb-3 validityHidden payingAmount">
                                             <div class="input-group">
                                                 <input name="amount" type="number" class="form-control" id="amount" aria-describedby="basic-addon3" >
-                                                <label for="amount">Amount</label>
+                                                <label for="amount">Password</label>
                                             </div>
                                         </div>
                                         <input name="OperatorId" type="hidden" id="OperatorId" class="form-control" value=83>
@@ -232,6 +240,7 @@
                                 <?php endif;?>
                                 <!-- Button -->
                                 <button type="submit" id="billPayBtn" class="btn btn-primary validityHidden" <?=(!$print_capability)?'disabled':''?>>Print</button>
+                                <button type="submit" id="billSave" class="btn btn-primary validityHidden">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -286,6 +295,7 @@
                                         <th class="text-center">Email</th>
                                         <th class="text-center">Print Limit</th>
                                         <th class="text-center">Printed</th>
+                                        <th class="text-center">Hide Column</th>
                                         <th class="text-center">Action</th>
                                     </tr>
                                 </thead>
@@ -405,6 +415,12 @@
                                             <label for="edit_print_limit" class="">Print Limit</label>
                                         </div>
                                     </div>
+                                    <div class="input-group mb-3 " >
+                                        <div class="input-group">
+                                            <input name="edit_hide_column" type="checkbox" class="form-control" id="edit_hide_column" aria-describedby="basic-addon3" <?=($session_user!='admin')?'readonly="readonly"':'';?>>
+                                            <label for="edit_hide_column" class="">Hide Column</label>
+                                        </div>
+                                    </div>
                                     
                                     
                                     <input name="editusermodal" type="hidden" class="form-control" id="editusermodal" aria-describedby="basic-addon3">
@@ -461,7 +477,7 @@
                         margin-left:0 ;
 		}
         #printSlip h1,h2,h3,h4,h5,h6{
-            font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+            /*font-family: SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;*/
             display: block;
             font-size: 20px;
             color: #212529;
@@ -517,6 +533,16 @@
                 }
             ]
         } );
+        hide_column_check=<?=$user_arr['hide_column']?>;
+        if(hide_column_check==1){
+            payment_data_table=$('#paymentHistoryTable').DataTable();
+            payment_data_table.columns( [ 6,7 ] ).visible( false, false );
+            payment_data_table.columns.adjust().draw( false );
+        }else{
+            payment_data_table=$('#paymentHistoryTable').DataTable();
+            payment_data_table.columns( [ 6,7 ] ).visible( true, true );
+            payment_data_table.columns.adjust().draw( true );
+        }
         //user_management
         var data_url = '<?php echo $config['HOST_URL']?>/userManagement.php';
         var session_user='<?=$session_user?>';
@@ -529,19 +555,30 @@
                 { "data": "email" },
                 { "data": "print_limit" },
                 { "data": "printed" },
+                { "data": "hide_column" },
                 {   
                     "data": "id",
                     "render": function ( data, type, row ) {
                         if(session_user=='admin'){
-                            if(type === 'display'){
-                            return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
-                             +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
-                            }else if(type === 'sort'){
+                            if(row.username=="admin"){
+                                if(type === 'display'){
+                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                                }else if(type === 'sort'){
+                                    return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                                }else{
+                                    return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>';
+                                }
+                            }else{
+                                if(type === 'display'){
                                 return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
                                  +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
-                            }else{
-                                return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
-                                    +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                                }else if(type === 'sort'){
+                                    return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                                     +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                                }else{
+                                    return '<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="editUser(this)" id="row'+data+'">Edit</button>'
+                                        +'<button class="btn btn-sm btn-primary" data-values=\''+JSON.stringify(row)+'\' onclick="deleteUser(this)" id="print_row'+data+'">Delete</button>';
+                                }
                             }
                         }else{
                             if(type === 'display'){
@@ -588,6 +625,12 @@
         $("#modalUser #edit_email").val(values.values.email);
         $("#modalUser #edit_print_limit").val(values.values.print_limit);
         $("#modalUser #editusermodal").val(values.values.id);
+        hide_col=values.values.hide_column;
+        if(hide_col==1){
+            $("#modalUser #edit_hide_column").prop( "checked", true );
+        }else{
+            $("#modalUser #edit_hide_column").prop( "checked", false );
+        }
         $("#modalUser .input-group>label").attr("class" , "active");
     }
     function deleteUser(value){
@@ -650,6 +693,7 @@
         // );
          window.onafterprint = function(){
              update_printed_value();
+             window.location.reload(true);
          }
     }
 
@@ -751,6 +795,23 @@
                 update_printed_value();
                 window.location.reload(true);
             }
+        });
+        
+    });
+    $('#billSave').click(function(event){
+        event.preventDefault();
+        event.stopPropagation();
+        var billPayFormData = $('.billPay').serializeArray().reduce(function(obj, item) {
+            obj[item.name] = item.value;
+            return obj;
+        });
+        var url = "<?php echo $config['HOST_URL']?>/dashboard.php";
+        new Promise( (resolve , reject) => {
+            billPayFormData['insert_customer']=1;
+            var x = ajaxSubmit( billPayFormData , url , "POST" );
+            setTimeout( resolve(x) , 2000)
+        } ).then(function(data){
+            location.reload();
         });
         
     });

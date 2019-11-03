@@ -29,6 +29,7 @@ function getUserList($username , $conn){
             $user['phone'] = $row["phone"];
             $user['print_limit'] = $row["print_limit"]; 
             $user['printed'] = $row["printed"]; 
+            $user['hide_column'] = $row["hide_column"]; 
             $result_arr['data'][] = $user; 
         }
         echo json_encode($result_arr);
@@ -57,6 +58,7 @@ function getUserListAll($conn){
             $user['phone'] = $row["phone"];
             $user['print_limit'] = $row["print_limit"];
             $user['printed'] = $row["printed"]; 
+            $user['hide_column'] = $row["hide_column"]; 
             $result_arr['data'][] = $user; 
         }
         echo json_encode($result_arr);
